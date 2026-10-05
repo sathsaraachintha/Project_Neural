@@ -124,6 +124,10 @@ void I2C_SCAN() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
+  
+  Serial.println("\n==================================");
+  Serial.println("NORVI X-SERIES DIAGNOSTIC TOOL");
+  Serial.println("==================================");
 
   // ==========================================================
   // WAKE UP EXPANSION MODULES 
@@ -134,13 +138,14 @@ void setup() {
   delay(50);
   digitalWrite(PCA_RESET, HIGH);  // Pull HIGH to wake up the modules
   delay(100);                     // Give them time to wake up
-  Serial.println("PCA Expanders Awakened on GPIO 21");
+  Serial.println("[SYSTEM] PCA Expanders Awakened on GPIO 21");
 
   // Now that they are awake, start I2C and scan
   Wire.begin(SDA_PIN, SCL_PIN);
   I2C_SCAN();
 
   // --- Initialize Modules using the PCA9538 library ---
+  Serial.println("[SYSTEM] Initializing 8-bit output modules (R4, R8, Q8)...");
   for (int i = 0; i < 8; i++) {
     module_r4.pinMode(i, OUTPUT); module_r4.digitalWrite(i, LOW); 
     module_r8.pinMode(i, OUTPUT); module_r8.digitalWrite(i, LOW); 
@@ -148,53 +153,78 @@ void setup() {
   }
   
   // Q16 Module (Still uses direct Wire commands since it's 16-bit)
+  Serial.println("[SYSTEM] Initializing 16-bit output module (Q16)...");
   write16(Q16_ADDR, 0x06, 0x0000); 
   write16(Q16_ADDR, 0x02, 0x0000); 
 
   if (io.begin()) {
     io.pinMode(IO_PB1, INPUT);
     io.pinMode(IO_PB2, INPUT);
+    Serial.println("[SYSTEM] PCA9536 Front Panel Buttons Initialized.");
+  } else {
+    Serial.println("[ERROR] PCA9536 Front Panel Buttons Not Found!");
   }
 
+  Serial.println("[SYSTEM] Initializing TFT Display...");
   tft.init();
   tft.setRotation(0); 
   tft.fillScreen(TFT_BLACK);
   tft.setTextSize(2); 
+  
+  Serial.println("[SYSTEM] Boot Sequence Complete. Ready for inputs.\n");
 }
 
 void loop() {
   bool currentPb1 = io.digitalRead(IO_PB1); 
   bool currentPb2 = io.digitalRead(IO_PB2); 
 
+  // --- PAGE NAVIGATION TRIGGER ---
   if (currentPb1 == LOW && lastPb1State == HIGH) {
     currentPage++;
     if (currentPage > 3) currentPage = 0; 
     tft.fillScreen(TFT_BLACK); 
+    
+    // Serial Output for Page Changes
+    Serial.print("[UI ACTION] Switched to Page: ");
+    if (currentPage == 0) Serial.println("0 (X-R4 Relays)");
+    else if (currentPage == 1) Serial.println("1 (X-R8 Relays)");
+    else if (currentPage == 2) Serial.println("2 (X-Q8 Outputs)");
+    else if (currentPage == 3) Serial.println("3 (X-Q16 Outputs)");
+    
     delay(50); 
   }
   lastPb1State = currentPb1;
 
+  // --- TOGGLE OUTPUTS TRIGGER ---
   if (currentPb2 == LOW && lastPb2State == HIGH) {
+    Serial.print("[HW ACTION] Toggle Button Pressed -> ");
+    
     if (currentPage == 0) {
       r4_state = (r4_state == 0x00) ? 0x0F : 0x00; 
       for (int i = 0; i < 4; i++) module_r4.digitalWrite(i, bitRead(r4_state, i) ? HIGH : LOW);
+      Serial.printf("X-R4 Relays set to: %s (0x%02X)\n", r4_state ? "ALL ON" : "ALL OFF", r4_state);
     } 
     else if (currentPage == 1) {
       r8_state = (r8_state == 0x00) ? 0xFF : 0x00; 
       for (int i = 0; i < 8; i++) module_r8.digitalWrite(i, bitRead(r8_state, i) ? HIGH : LOW);
+      Serial.printf("X-R8 Relays set to: %s (0x%02X)\n", r8_state ? "ALL ON" : "ALL OFF", r8_state);
     } 
     else if (currentPage == 2) {
       q8_state = (q8_state == 0x00) ? 0xFF : 0x00; 
       for (int i = 0; i < 8; i++) module_q8.digitalWrite(i, bitRead(q8_state, i) ? HIGH : LOW);
+      Serial.printf("X-Q8 Outputs set to: %s (0x%02X)\n", q8_state ? "ALL ON" : "ALL OFF", q8_state);
     } 
     else if (currentPage == 3) {
       q16_state = (q16_state == 0x0000) ? 0xFFFF : 0x0000; 
       write16(Q16_ADDR, 0x02, q16_state);
+      Serial.printf("X-Q16 Outputs set to: %s (0x%04X)\n", q16_state ? "ALL ON" : "ALL OFF", q16_state);
     }
     delay(50); 
   }
   lastPb2State = currentPb2;
 
+  // --- TFT DISPLAY REFRESH ---
+  // (We do not put Serial.prints in this 100ms block to avoid flooding the Serial Monitor)
   if (millis() - lastDisplayUpdate >= 100) {
     lastDisplayUpdate = millis();
     tft.setCursor(0, 5);
