@@ -126,7 +126,9 @@ void setup() {
   delay(1000);
   
   Serial.println("\n==================================");
-  Serial.println("NORVI X-SERIES DIAGNOSTIC TOOL");
+  Serial.println("\nNORVI");
+  
+  
   Serial.println("==================================");
 
   // ==========================================================
@@ -217,7 +219,7 @@ void loop() {
     else if (currentPage == 3) {
       q16_state = (q16_state == 0x0000) ? 0xFFFF : 0x0000; 
       write16(Q16_ADDR, 0x02, q16_state);
-      Serial.printf("X-Q16 Outputs set to: %s (0x%04X)\n", q16_state ? "ALL ON" : "ALL OFF", q16_state);
+      Serial.printf("X-Q1........6 Outputs set to: %s (0x%04X)\n", q16_state ? "ALL ON" : "ALL OFF", q16_state);
     }
     delay(50); 
   }
