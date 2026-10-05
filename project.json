@@ -1,0 +1,12 @@
+{
+  "userId": "u_fc77dfc82af6666a",
+  "projectId": "project_neural-daa9e1d4",
+  "name": "Project_Neural",
+  "board": {
+    "fqbn": "esp32:esp32:esp32s3"
+  },
+  "selections": null,
+  "serial": null,
+  "createdAt": "2026-10-05T07:33:24.507Z",
+  "updatedAt": "2026-10-05T07:33:24.507Z"
+}
