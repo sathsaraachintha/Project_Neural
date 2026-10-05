@@ -1,8 +1,8 @@
 #include <SPI.h>
-#include <Ethernet.h>
+//#include <Ethernet.h>
 
 #define LGFX_USE_V1
-//#include <LovyanGFX.hpp>
+#include <LovyanGFX.hpp>
 
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Panel_ST7789 _panel_instance;
